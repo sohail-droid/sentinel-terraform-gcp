@@ -1,0 +1,62 @@
+#validate-gcp-security.sentinel
+
+import "tfplan/v2" as tfplan
+import "json"
+
+
+#rule1: public ssh
+
+no_public_ssh = rule {
+    not any tfplan.resource_changes as _, rc {
+        rc.type is "google_compute_firewall" and
+        (rc.mode is "managed") and
+        (rc.change.actions contains "create" or rc.change.actions contains "update") and
+        rc.change.after.allow.ports contains "22" and
+        rc.change.after.source_ranges contains "0.0.0.0/0"
+    }
+}
+
+
+# Rule 2: Enforce zone us-central1-a
+
+vms = filter tfplan.resource_changes as _, rc {
+    rc.type is "google_compute_instance" and
+    rc.mode is "managed" and
+    (rc.change.actions contains "create" or rc.change.actions contains "update")
+}
+
+enforce_zone = rule {
+    all vms as _, vm {
+        vm.change.after.zone is "us-central1-a"
+    }
+}
+
+
+#Rule 3: Enforce region us-central1
+
+# Step 1: Filter subnetworks
+subnets = filter tfplan.resource_changes as _, rc {
+    rc.type is "google_compute_subnetwork" and
+    rc.mode is "managed" and
+    (rc.change.actions contains "create" or rc.change.actions contains "update")
+}
+
+# Step 2: Filter storage buckets
+buckets = filter tfplan.resource_changes as _, rc {
+    rc.type is "google_storage_bucket" and
+    rc.mode is "managed" and
+    (rc.change.actions contains "create" or rc.change.actions contains "update")
+}
+
+# Step 3: Check if all filtered resources are in correct region
+enforce_region = rule {
+    all subnets as _, sn { sn.change.after.region is "us-central1" } and
+    all buckets as _, b { b.change.after.location is "us-central1" }
+}
+
+
+
+# Step 4: Main rule all checks
+main = rule {
+    no_public_ssh and enforce_zone and enforce_region
+}
