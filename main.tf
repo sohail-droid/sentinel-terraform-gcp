@@ -1,11 +1,11 @@
 provider "google" {
-  project = "training-2024-batch"
+  project = ""
   region  = "us-central1"
 }
 
 #vpc networks
 resource "google_compute_network" "vpc_network" {
-  project                 = "training-2024-batch"
+  project                 = " "
   name                    = "vpc-network"
   auto_create_subnetworks = false
 }
@@ -74,7 +74,7 @@ resource "google_compute_instance" "default" {
 
 #creating a storage bucket
 resource "google_storage_bucket" "demo_bucket" {
-  name     = "training-2024-batch-demo-bucket"
+  name     = " -demo-bucket"
   location = "us-central1"
 
   uniform_bucket_level_access = true
@@ -97,4 +97,5 @@ resource "google_storage_bucket" "demo_bucket" {
     }
   }
 }
+
 
